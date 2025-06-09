@@ -1,0 +1,71 @@
+Complete Arduino Code:
+#include <Servo.h>
+#include <SoftwareSerial.h>
+// Bluetooth
+SoftwareSerial BT(10, 11); // RX, TX
+// Components
+Servo lidServo;
+Servo brushServo;
+#define GESTURE_PIN 2
+#define TRIG_PIN 3
+#define ECHO_PIN 4
+#define UV_PIN 7
+long duration;
+int distance;
+void setup() {
+  Serial.begin(9600);
+  BT.begin(9600);
+  pinMode(GESTURE_PIN, INPUT);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(UV_PIN, OUTPUT);
+  lidServo.attach(5);
+  brushServo.attach(6);
+  closeLid();
+}
+void loop() {
+  // Check Bluetooth Commands
+  if (BT.available()) {
+    char command = BT.read();
+    if (command == 'O') openLid();
+    else if (command == 'C') closeLid();
+    else if (command == 'S') startCleaning();
+    else if (command == 'D') disinfect();
+  }
+  // Check Gesture
+  if (digitalRead(GESTURE_PIN) == HIGH) {
+    openLid();
+    delay(5000);
+    closeLid();
+  }
+  // Proximity Detection
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  duration = pulseIn(ECHO_PIN, HIGH);
+  distance = duration * 0.034 / 2;
+
+  if (distance < 20) {
+    openLid();
+    delay(5000);
+    closeLid();
+  }
+}
+void openLid() {
+  lidServo.write(90); // Open position
+}
+void closeLid() {
+  lidServo.write(0); // Closed position
+}
+void startCleaning() {
+  brushServo.write(90); // Start brush rotation
+  delay(5000);
+  brushServo.write(0);  // Stop brush
+}
+void disinfect() {
+  digitalWrite(UV_PIN, HIGH);
+  delay(5000);
+  digitalWrite(UV_PIN, LOW);
+}
